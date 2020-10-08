@@ -34,8 +34,9 @@ def create_train_model(model_creator, hparams, scope=None):
     graph = tf.Graph()
     with graph.as_default():
         # feed train file name, valid file name, or test file name
-        filenames = tf.placeholder(tf.string, shape=[None])
-        #src_dataset = tf.contrib.data.TFRecordDataset(filenames)
+        filenames = tf.compat.v1.placeholder(tf.string, shape=[None])
+        # tf.placeholder(tf.string, shape=[None])
+        # src_dataset = tf.contrib.data.TFRecordDataset(filenames)
         src_dataset = tf.data.TFRecordDataset(filenames)
 
         if hparams.data_format == 'ffm':
@@ -153,9 +154,9 @@ def cache_data(hparams, filename, flag):
 
 
 def train(hparams, scope=None, target_session=""):
-    params = hparams.values()
-    for key, val in params.items():
-        hparams.logger.info(str(key) + ':' + str(val))
+    # params = hparams.values()
+    # for key, val in params.items():
+    #     hparams.logger.info(str(key) + ':' + str(val))
 
     print('load and cache data...')
     if hparams.train_file is not None:
@@ -216,10 +217,11 @@ def train(hparams, scope=None, target_session=""):
     # define train,eval,infer graph
     # define train session, eval session, infer session
     train_model = create_train_model(model_creator, hparams, scope)
-    gpuconfig = tf.ConfigProto()
+
+    gpuconfig = tf.compat.v1.ConfigProto()
     gpuconfig.gpu_options.allow_growth = True
-    tf.set_random_seed(1234)
-    train_sess = tf.Session(target=target_session, graph=train_model.graph, config=gpuconfig)
+    tf.compat.v1.set_random_seed(1234)
+    train_sess = tf.compat.v1.Session(target=target_session, graph=train_model.graph, config=gpuconfig)
 
     train_sess.run(train_model.model.init_op)
     # load model from checkpoint
@@ -231,7 +233,7 @@ def train(hparams, scope=None, target_session=""):
         except:
             raise IOError("Failed to find any matching files for {0}".format(checkpoint_path))
     print('total_loss = data_loss+regularization_loss, data_loss = {rmse or logloss ..}')
-    writer = tf.summary.FileWriter(util.SUMMARIES_DIR, train_sess.graph)
+    writer = tf.summary.create_file_writer(util.SUMMARIES_DIR, train_sess.graph)
     last_eval = 0
     for epoch in range(hparams.epochs):
         step = 0

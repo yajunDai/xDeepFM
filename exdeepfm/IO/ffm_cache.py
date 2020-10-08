@@ -14,7 +14,7 @@ class FfmCache(BaseCache):
         batch_size = hparams.batch_size
         labels = []
         features = []
-        impression_id = []
+        impression_id = [] #id 编号
         cnt = 0
         with open(file, 'r') as rd:
             while True:
@@ -36,9 +36,9 @@ class FfmCache(BaseCache):
                     if not word.strip():
                         continue
                     tokens = word.strip().split(':')
-                    cur_feature_list.append( \
-                        [int(tokens[0]) - 1, \
-                         int(tokens[1]) - 1, \
+                    cur_feature_list.append(
+                        [int(tokens[0]) - 1,
+                         int(tokens[1]) - 1,
                          float(tokens[2])])
                 features.append(cur_feature_list)
                 labels.append(label)
@@ -76,7 +76,7 @@ class FfmCache(BaseCache):
                     dnn_feat_dic[features[i][j][0]] = 0
                 else:
                     dnn_feat_dic[features[i][j][0]] += 1
-                dnn_feat_indices.append([i * FIELD_COUNT + features[i][j][0], \
+                dnn_feat_indices.append([i * FIELD_COUNT + features[i][j][0],
                                          dnn_feat_dic[features[i][j][0]]])
                 dnn_feat_values.append(features[i][j][1])
                 dnn_feat_weights.append(features[i][j][2])
@@ -85,7 +85,7 @@ class FfmCache(BaseCache):
         dnn_feat_shape[1] += 1
 
         sorted_index = sorted(range(len(dnn_feat_indices)),
-                              key=lambda k: (dnn_feat_indices[k][0], \
+                              key=lambda k: (dnn_feat_indices[k][0],
                                              dnn_feat_indices[k][1]))
 
         res = {}
@@ -103,7 +103,8 @@ class FfmCache(BaseCache):
     def write_tfrecord(self, infile, outfile, hparams):
         sample_num = 0
         FEATURE_COUNT = hparams.FEATURE_COUNT
-        writer = tf.python_io.TFRecordWriter(outfile)
+        writer = tf.compat.v1.python_io.TFRecordWriter(outfile)
+        #tf.python_io.TFRecordWriter(outfile)
         feature_cnt = defaultdict(lambda: 0)
         impression_id_list = []
         try:
@@ -150,6 +151,7 @@ class FfmCache(BaseCache):
                         }
                     )
                 )
+                # 将其序列化为字符串
                 serialized = example.SerializeToString()
                 writer.write(serialized)
         except:

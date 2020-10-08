@@ -25,7 +25,8 @@ class FfmIterator(BaseIterator):
     def get_iterator(self, src_dataset):
         src_dataset = src_dataset.map(self.parser)
         # src_dataset = src_dataset.shuffle(buffer_size=BUFFER_SIZE)
-        iterator = src_dataset.make_initializable_iterator()
+        iterator = tf.compat.v1.data.make_initializable_iterator(src_dataset)
+        # iterator = src_dataset.make_initializable_iterator()
         _fm_feat_indices, _fm_feat_values, \
         _fm_feat_shape, _labels, _dnn_feat_indices, \
         _dnn_feat_values, _dnn_feat_weights, _dnn_feat_shape = iterator.get_next()
@@ -40,24 +41,26 @@ class FfmIterator(BaseIterator):
         self.dnn_feat_shape = _dnn_feat_shape
 
     def parser(self, record):
+        # 用于将可变长度输入要素解析为Tensor的配置。
         keys_to_features = {
-            'fm_feat_indices': tf.FixedLenFeature([], tf.string),
-            'fm_feat_values': tf.VarLenFeature(tf.float32),
-            'fm_feat_shape': tf.FixedLenFeature([2], tf.int64),
-            'labels': tf.FixedLenFeature([], tf.string),
-            'dnn_feat_indices': tf.FixedLenFeature([], tf.string),
-            'dnn_feat_values': tf.VarLenFeature(tf.int64),
-            'dnn_feat_weights': tf.VarLenFeature(tf.float32),
-            'dnn_feat_shape': tf.FixedLenFeature([2], tf.int64),
+            'fm_feat_indices': tf.io.FixedLenFeature([], tf.string),
+            'fm_feat_values': tf.io.VarLenFeature(tf.float32),
+            'fm_feat_shape': tf.io.FixedLenFeature([2], tf.int64),
+            'labels': tf.io.FixedLenFeature([], tf.string),
+            'dnn_feat_indices': tf.io.FixedLenFeature([], tf.string),
+            'dnn_feat_values': tf.io.VarLenFeature(tf.int64),
+            'dnn_feat_weights': tf.io.VarLenFeature(tf.float32),
+            'dnn_feat_shape': tf.io.FixedLenFeature([2], tf.int64),
         }
-        parsed = tf.parse_single_example(record, keys_to_features)
-        fm_feat_indices = tf.reshape(tf.decode_raw(parsed['fm_feat_indices'], tf.int64), [-1, 2])
-        fm_feat_values = tf.sparse_tensor_to_dense(parsed['fm_feat_values'])
+        parsed = tf.io.parse_single_example(record, keys_to_features)
+        fm_feat_indices = tf.reshape(tf.io.decode_raw(parsed['fm_feat_indices'], tf.int64), [-1, 2])
+        print(parsed['fm_feat_values'])
+        fm_feat_values = tf.sparse.to_dense(parsed['fm_feat_values'])
         fm_feat_shape = parsed['fm_feat_shape']
-        labels = tf.reshape(tf.decode_raw(parsed['labels'], tf.float32), [-1, 1])
-        dnn_feat_indices = tf.reshape(tf.decode_raw(parsed['dnn_feat_indices'], tf.int64), [-1, 2])
-        dnn_feat_values = tf.sparse_tensor_to_dense(parsed['dnn_feat_values'])
-        dnn_feat_weights = tf.sparse_tensor_to_dense(parsed['dnn_feat_weights'])
+        labels = tf.reshape(tf.io.decode_raw(parsed['labels'], tf.float32), [-1, 1])
+        dnn_feat_indices = tf.reshape(tf.io.decode_raw(parsed['dnn_feat_indices'], tf.int64), [-1, 2])
+        dnn_feat_values = tf.sparse.to_dense(parsed['dnn_feat_values'])
+        dnn_feat_weights = tf.sparse.to_dense(parsed['dnn_feat_weights'])
         dnn_feat_shape = parsed['dnn_feat_shape']
         return fm_feat_indices, fm_feat_values, \
                fm_feat_shape, labels, dnn_feat_indices, \
@@ -97,50 +100,50 @@ class DinIterator(BaseIterator):
 
     def parser(self, record):
         keys_to_features = {
-            'attention_news_indices': tf.FixedLenFeature([], tf.string),
-            'attention_news_values': tf.VarLenFeature(tf.float32),
-            'attention_news_shape': tf.FixedLenFeature([2], tf.int64),
+            'attention_news_indices': tf.io.FixedLenFeature([], tf.string),
+            'attention_news_values': tf.io.VarLenFeature(tf.float32),
+            'attention_news_shape': tf.io.FixedLenFeature([2], tf.int64),
 
-            'attention_user_indices': tf.FixedLenFeature([], tf.string),
-            'attention_user_values': tf.VarLenFeature(tf.int64),
-            'attention_user_weights': tf.VarLenFeature(tf.float32),
-            'attention_user_shape': tf.FixedLenFeature([2], tf.int64),
+            'attention_user_indices': tf.io.FixedLenFeature([], tf.string),
+            'attention_user_values': tf.io.VarLenFeature(tf.int64),
+            'attention_user_weights': tf.io.VarLenFeature(tf.float32),
+            'attention_user_shape': tf.io.FixedLenFeature([2], tf.int64),
 
-            'fm_feat_indices': tf.FixedLenFeature([], tf.string),
-            'fm_feat_val': tf.VarLenFeature(tf.float32),
-            'fm_feat_shape': tf.FixedLenFeature([2], tf.int64),
+            'fm_feat_indices': tf.io.FixedLenFeature([], tf.string),
+            'fm_feat_val': tf.io.VarLenFeature(tf.float32),
+            'fm_feat_shape': tf.io.FixedLenFeature([2], tf.int64),
 
-            'labels': tf.FixedLenFeature([], tf.string),
+            'labels': tf.io.FixedLenFeature([], tf.string),
 
-            'dnn_feat_indices': tf.FixedLenFeature([], tf.string),
-            'dnn_feat_values': tf.VarLenFeature(tf.int64),
-            'dnn_feat_weight': tf.VarLenFeature(tf.float32),
-            'dnn_feat_shape': tf.FixedLenFeature([2], tf.int64),
+            'dnn_feat_indices': tf.io.FixedLenFeature([], tf.string),
+            'dnn_feat_values': tf.io.VarLenFeature(tf.int64),
+            'dnn_feat_weight': tf.io.VarLenFeature(tf.float32),
+            'dnn_feat_shape': tf.io.FixedLenFeature([2], tf.int64),
         }
-        parsed = tf.parse_single_example(record, keys_to_features)
+        parsed = tf.io.parse_single_example(record, keys_to_features)
 
-        attention_news_indices = tf.reshape(tf.decode_raw(parsed['attention_news_indices'], \
+        attention_news_indices = tf.reshape(tf.io.decode_raw(parsed['attention_news_indices'], \
                                                           tf.int64), [-1, 2])
-        attention_news_values = tf.sparse_tensor_to_dense(parsed['attention_news_values'])
+        attention_news_values = tf.sparse.to_dense(parsed['attention_news_values'])
         attention_news_shape = parsed['attention_news_shape']
 
-        attention_user_indices = tf.reshape(tf.decode_raw(parsed['attention_user_indices'], \
+        attention_user_indices = tf.reshape(tf.io.decode_raw(parsed['attention_user_indices'], \
                                                           tf.int64), [-1, 2])
-        attention_user_values = tf.sparse_tensor_to_dense(parsed['attention_user_values'])
-        attention_user_weights = tf.sparse_tensor_to_dense(parsed['attention_user_weights'])
+        attention_user_values = tf.sparse.to_dense(parsed['attention_user_values'])
+        attention_user_weights = tf.sparse.to_dense(parsed['attention_user_weights'])
         attention_user_shape = parsed['attention_user_shape']
 
-        fm_feat_indices = tf.reshape(tf.decode_raw(parsed['fm_feat_indices'], \
+        fm_feat_indices = tf.reshape(tf.io.decode_raw(parsed['fm_feat_indices'], \
                                                    tf.int64), [-1, 2])
-        fm_feat_val = tf.sparse_tensor_to_dense(parsed['fm_feat_val'])
+        fm_feat_val = tf.sparse.to_dense(parsed['fm_feat_val'])
         fm_feat_shape = parsed['fm_feat_shape']
 
-        labels = tf.reshape(tf.decode_raw(parsed['labels'], tf.float32), [-1, 1])
+        labels = tf.reshape(tf.io.decode_raw(parsed['labels'], tf.float32), [-1, 1])
 
-        dnn_feat_indices = tf.reshape(tf.decode_raw(parsed['dnn_feat_indices'], \
+        dnn_feat_indices = tf.reshape(tf.io.decode_raw(parsed['dnn_feat_indices'], \
                                                     tf.int64), [-1, 2])
-        dnn_feat_values = tf.sparse_tensor_to_dense(parsed['dnn_feat_values'])
-        dnn_feat_weight = tf.sparse_tensor_to_dense(parsed['dnn_feat_weight'])
+        dnn_feat_values = tf.sparse.to_dense(parsed['dnn_feat_values'])
+        dnn_feat_weight = tf.sparse.to_dense(parsed['dnn_feat_weight'])
         dnn_feat_shape = parsed['dnn_feat_shape']
         return (attention_news_indices, attention_news_values, attention_news_shape, \
                 attention_user_indices, attention_user_values, attention_user_weights, \
@@ -175,31 +178,30 @@ class CCCFNetIterator(BaseIterator):
 
     def parser(self, record):
         keys_to_features = {
-            'labels': tf.FixedLenFeature([], tf.string),
-            'userIds': tf.VarLenFeature(tf.int64),
-            'itemIds': tf.VarLenFeature(tf.int64),
-            'user_profiles_indices': tf.FixedLenFeature([], tf.string),
-            'user_profiles_values': tf.VarLenFeature(tf.int64),
-            'user_profiles_weights': tf.VarLenFeature(tf.float32),
-            'user_profiles_shape': tf.FixedLenFeature([2], tf.int64),
-            'item_profiles_indices': tf.FixedLenFeature([], tf.string),
-            'item_profiles_values': tf.VarLenFeature(tf.int64),
-            'item_profiles_weights': tf.VarLenFeature(tf.float32),
-            'item_profiles_shape': tf.FixedLenFeature([2], tf.int64)
+            'labels': tf.io.FixedLenFeature([], tf.string),
+            'userIds': tf.io.VarLenFeature(tf.int64),
+            'itemIds': tf.io.VarLenFeature(tf.int64),
+            'user_profiles_indices': tf.io.FixedLenFeature([], tf.string),
+            'user_profiles_values': tf.io.VarLenFeature(tf.int64),
+            'user_profiles_weights': tf.io.VarLenFeature(tf.float32),
+            'user_profiles_shape': tf.io.FixedLenFeature([2], tf.int64),
+            'item_profiles_indices': tf.io.FixedLenFeature([], tf.string),
+            'item_profiles_values': tf.io.VarLenFeature(tf.int64),
+            'item_profiles_weights': tf.io.VarLenFeature(tf.float32),
+            'item_profiles_shape': tf.io.FixedLenFeature([2], tf.int64)
         }
-        parsed = tf.parse_single_example(record, keys_to_features)
-        labels = tf.reshape(tf.decode_raw(parsed['labels'], tf.float32), [-1, 1])
-        userIds = tf.sparse_tensor_to_dense(parsed['userIds'])
-        itemIds = tf.sparse_tensor_to_dense(parsed['itemIds'])
-
-        user_profiles_indices = tf.reshape(tf.decode_raw(parsed['user_profiles_indices'], tf.int64), [-1, 2])
-        user_profiles_values = tf.sparse_tensor_to_dense(parsed['user_profiles_values'])
-        user_profiles_weights = tf.sparse_tensor_to_dense(parsed['user_profiles_weights'])
+        parsed = tf.io.parse_single_example(record, keys_to_features)
+        labels = tf.reshape(tf.io.decode_raw(parsed['labels'], tf.float32), [-1, 1])
+        userIds = tf.sparse.to_dense(parsed['userIds'])
+        itemIds = tf.sparse.to_dense(parsed['itemIds'])
+        user_profiles_indices = tf.reshape(tf.io.decode_raw(parsed['user_profiles_indices'], tf.int64), [-1, 2])
+        user_profiles_values = tf.sparse.to_dense(parsed['user_profiles_values'])
+        user_profiles_weights = tf.sparse.to_dense(parsed['user_profiles_weights'])
         user_profiles_shape = parsed['user_profiles_shape']
 
-        item_profiles_indices = tf.reshape(tf.decode_raw(parsed['item_profiles_indices'], tf.int64), [-1, 2])
-        item_profiles_values = tf.sparse_tensor_to_dense(parsed['item_profiles_values'])
-        item_profiles_weights = tf.sparse_tensor_to_dense(parsed['item_profiles_weights'])
+        item_profiles_indices = tf.reshape(tf.io.decode_raw(parsed['item_profiles_indices'], tf.int64), [-1, 2])
+        item_profiles_values = tf.sparse.to_dense(parsed['item_profiles_values'])
+        item_profiles_weights = tf.sparse.to_dense(parsed['item_profiles_weights'])
         item_profiles_shape = parsed['item_profiles_shape']
 
         return labels, userIds, itemIds, \

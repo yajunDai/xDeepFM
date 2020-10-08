@@ -5,13 +5,13 @@ import tensorflow as tf
 import utils.util as util
 from IO.iterator import BaseIterator
 
-__all__ = ["BaseModel"]
+__all__ = [""]
 
 
 class BaseModel(object):
     def __init__(self, hparams, iterator, scope=None):
         assert isinstance(iterator, BaseIterator)
-        tf.set_random_seed(1234)
+        tf.random.set_seed(1234)
         self.iterator = iterator
         self.layer_params = []
         self.embed_params = []
@@ -25,9 +25,9 @@ class BaseModel(object):
         self.data_loss = self._compute_data_loss(hparams)
         self.regular_loss = self._compute_regular_loss(hparams)
         self.loss = tf.add(self.data_loss, self.regular_loss)
-        self.saver = tf.train.Saver(max_to_keep=hparams.epochs)
+        self.saver = tf.compat.v1.train.Saver(max_to_keep=hparams.epochs)
         self.update = self._build_train_opt(hparams)
-        self.init_op = tf.global_variables_initializer()
+        self.init_op = tf.compat.v1.global_variables_initializer()
         self.merged = self._add_summaries()
 
     def _get_pred(self, logit, hparams):
@@ -43,7 +43,7 @@ class BaseModel(object):
         tf.summary.scalar("data_loss", self.data_loss)
         tf.summary.scalar("regular_loss", self.regular_loss)
         tf.summary.scalar("loss", self.loss)
-        merged = tf.summary.merge_all()
+        merged = tf.compat.v1.summary.merge_all()
         return merged
 
     @abc.abstractmethod
@@ -80,13 +80,13 @@ class BaseModel(object):
 
     def _get_initializer(self, hparams):
         if hparams.init_method == 'tnormal':
-            return tf.truncated_normal_initializer(stddev=hparams.init_value)
+            return tf.compat.v1.truncated_normal_initializer(stddev=hparams.init_value)
         elif hparams.init_method == 'uniform':
             return tf.random_uniform_initializer(-hparams.init_value, hparams.init_value)
         elif hparams.init_method == 'normal':
             return tf.random_normal_initializer(stddev=hparams.init_value)
         elif hparams.init_method == 'xavier_normal':
-            return tf.contrib.layers.xavier_initializer(uniform=False)
+            return tf.layers.xavier_initializer(uniform=False)
         elif hparams.init_method == 'xavier_uniform':
             return tf.contrib.layers.xavier_initializer(uniform=True)
         elif hparams.init_method == 'he_normal':
@@ -96,7 +96,7 @@ class BaseModel(object):
             return tf.contrib.layers.variance_scaling_initializer( \
                 factor=2.0, mode='FAN_IN', uniform=True)
         else:
-            return tf.truncated_normal_initializer(stddev=hparams.init_value)
+            return tf.compat.v1.truncated_normal_initializer(stddev=hparams.init_value)
 
     def _compute_data_loss(self, hparams):
         if hparams.loss == 'cross_entropy_loss':
@@ -105,10 +105,10 @@ class BaseModel(object):
                 labels=tf.reshape(self.iterator.labels, [-1])))
         elif hparams.loss == 'square_loss':
             data_loss = tf.sqrt(tf.reduce_mean(
-                tf.squared_difference(tf.reshape(self.pred, [-1]), tf.reshape(self.iterator.labels, [-1]))))
+                tf.compat.v1.squared_difference(tf.reshape(self.pred, [-1]), tf.reshape(self.iterator.labels, [-1]))))
         elif hparams.loss == 'log_loss':
-            data_loss = tf.reduce_mean(tf.losses.log_loss(predictions=tf.reshape(self.pred, [-1]),
-                                                          labels=tf.reshape(self.iterator.labels, [-1])))
+            data_loss = tf.reduce_mean(tf.losses.categorical_crossentropy(y_pred=tf.reshape(self.pred, [-1]),
+                                                          y_true=tf.reshape(self.iterator.labels, [-1])))
         else:
             raise ValueError("this loss not defined {0}".format(hparams.loss))
         return data_loss
@@ -121,34 +121,34 @@ class BaseModel(object):
     def _build_train_opt(self, hparams):
         def train_opt(hparams):
             if hparams.optimizer == 'adadelta':
-                train_step = tf.train.AdadeltaOptimizer( \
+                train_step = tf.compat.v1.train.AdadeltaOptimizer( \
                     hparams.learning_rate).minimize(self.loss)
             elif hparams.optimizer == 'adagrad':
-                train_step = tf.train.AdagradOptimizer( \
+                train_step = tf.compat.v1.train.AdagradOptimizer( \
                     hparams.learning_rate).minimize(self.loss)
             elif hparams.optimizer == 'sgd':
-                train_step = tf.train.GradientDescentOptimizer( \
+                train_step = tf.compat.v1.train.GradientDescentOptimizer( \
                     hparams.learning_rate).minimize(self.loss)
             elif hparams.optimizer == 'adam':
-                train_step = tf.train.AdamOptimizer( \
+                train_step = tf.compat.v1.train.AdamOptimizer( \
                     hparams.learning_rate).minimize(self.loss)
             elif hparams.optimizer == 'ftrl':
-                train_step = tf.train.FtrlOptimizer( \
+                train_step = tf.compat.v1.train.FtrlOptimizer( \
                     hparams.learning_rate).minimize(self.loss)
             elif hparams.optimizer == 'gd':
-                train_step = tf.train.GradientDescentOptimizer( \
+                train_step = tf.compat.v1.train.GradientDescentOptimizer( \
                     hparams.learning_rate).minimize(self.loss)
             elif hparams.optimizer == 'padagrad':
-                train_step = tf.train.ProximalAdagradOptimizer( \
+                train_step = tf.compat.v1.train.ProximalAdagradOptimizer( \
                     hparams.learning_rate).minimize(self.loss)
             elif hparams.optimizer == 'pgd':
-                train_step = tf.train.ProximalGradientDescentOptimizer( \
+                train_step = tf.compat.v1.train.ProximalGradientDescentOptimizer( \
                     hparams.learning_rate).minimize(self.loss)
             elif hparams.optimizer == 'rmsprop':
-                train_step = tf.train.RMSPropOptimizer( \
+                train_step = tf.compat.v1.train.RMSPropOptimizer( \
                     hparams.learning_rate).minimize(self.loss)
             else:
-                train_step = tf.train.GradientDescentOptimizer( \
+                train_step = tf.compat.v1.train.GradientDescentOptimizer( \
                     hparams.learning_rate).minimize(self.loss)
             return train_step
 
@@ -177,7 +177,7 @@ class BaseModel(object):
             raise ValueError("this activations not defined {0}".format(activation))
 
     def _dropout(self, logit, layer_idx):
-        logit = tf.nn.dropout(x=logit, keep_prob=self.layer_keeps[layer_idx])
+        logit = tf.nn.dropout(x=logit, rate=self.layer_keeps[layer_idx])
         return logit
 
     def train(self, sess):

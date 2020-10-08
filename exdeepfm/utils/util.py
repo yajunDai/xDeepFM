@@ -59,7 +59,7 @@ def check_file_exist(filename):
 def load_yaml_file(filename):
     with open(filename) as f:
         try:
-            config = yaml.load(f)
+            config = yaml.load(f)#,Loader=yaml.FullLoader)
         except:
             raise IOError("load {0} error!".format(filename))
     return config
